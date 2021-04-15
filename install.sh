@@ -138,9 +138,9 @@ GATEWAY_URL=$INGRESS_HOST:$INGRESS_PORT
 
 echo '->' Demo disponível em: http://$GATEWAY_URL/productpage
 
-# aplicar regras de destino
-echo '->'Aplicar regras adicionais na demo do Istio
-kubectl apply -n $DEMO_NAMESPACE -f https://raw.githubusercontent.com/istio/istio/release-1.9/samples/bookinfo/networking/destination-rule-all.yaml
+# aplicar regras de destino adicionais (teste)
+#echo '->'Aplicar regras adicionais na demo do Istio
+#kubectl apply -n $DEMO_NAMESPACE -f https://raw.githubusercontent.com/istio/istio/release-1.9/samples/bookinfo/networking/destination-rule-all.yaml
 
 # -----------------------------
 # configuração do monitoramento
@@ -173,7 +173,7 @@ echo '->'Instalação do Kiali
 helm upgrade \
     --install \
     --set cr.create=true \
-    --set cr.namespace=istio-system \
+    --set cr.namespace=$KIALI_NAMESPACE \
     --namespace $KIALI_NAMESPACE \
     --repo https://kiali.org/helm-charts \
     kiali-operator \
