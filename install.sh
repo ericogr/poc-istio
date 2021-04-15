@@ -149,7 +149,10 @@ kubectl apply -n $DEMO_NAMESPACE -f https://raw.githubusercontent.com/istio/isti
 # criar o service monitoring
 echo '->'Configurar o monitoramento do Prometheus para o Istio
 kubectl -n $ISTIO_NAMESPACE apply -f https://raw.githubusercontent.com/istio/istio/4461a6b2324bceabd6f0ef3896ca1ca338180c45/samples/addons/extras/prometheus-operator.yaml
-kubectl -n $ISTIO_NAMESPACE label --overwrite -f https://raw.githubusercontent.com/istio/istio/4461a6b2324bceabd6f0ef3896ca1ca338180c45/samples/addons/extras/prometheus-operator.yaml release=prometheus
+kubectl -n $ISTIO_NAMESPACE label --overwrite -f https://raw.githubusercontent.com/istio/istio/4461a6b2324bceabd6f0ef3896ca1ca338180c45/samples/addons/extras/prometheus-operator.yaml release=prometheus-operator
+
+# este script é o completo, para todas as métricas. o basico no script deve ser suficiente
+# kubectl -n $ISTIO_NAMESPACE apply -f optionals/service-monitor-istio.yaml
 
 # istio multicluster (único prometheus)
 # https://istio.io/latest/docs/ops/best-practices/observability/#federation-using-workload-level-aggregated-metrics
