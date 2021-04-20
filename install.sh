@@ -12,18 +12,22 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 ISTIO_VERSION=1.9.2
 TARGET_ARCH=x86_64
 DEMO_NAMESPACE=istio-demo
-KIALI_NAMESPACE=kiali-operator
+KIALI_OPERATOR_NAMESPACE=kiali-operator
+KIALI_NAMESPACE=kiali
+JAEGER_NAMESPACE=jaeger
 PROMETHEUS_NAMESPACE=prometheus-operator
 
 # ---------------------------------
 # Parametros internos (não alterar)
 # ---------------------------------
 ISTIO_NAMESPACE=istio-system
+ISTIO_OPERATOR_NAMESPACE=istio-operator
+JAEGER_OPERATOR_NAMESPACE=jaeger-operator
 ISTIO_BIN=bin/istio-$ISTIO_VERSION/bin/istioctl
 
 mensagem() {
   PARAM_MENSAGEM=$1
-  echo "📜$PARAM_MENSAGEM"
+  echo "📜 $PARAM_MENSAGEM"
 }
 
 create_namespace() {
@@ -93,7 +97,7 @@ helm upgrade \
 # --------------------------
 # instalação
 mensagem "Instalando o Istio operator"
-$ISTIO_BIN operator init --operatorNamespace istio-operator
+$ISTIO_BIN operator init --operatorNamespace $ISTIO_OPERATOR_NAMESPACE
 
 # ---------------------
 # configurar o operator
@@ -173,17 +177,17 @@ kubectl -n $ISTIO_NAMESPACE label --overwrite -f https://raw.githubusercontent.c
 # instalação padrão do kiali
 # --------------------------
 # se o script abaixo falhar, tente rodar novamente depois de alguns segundos
+create_namespace $KIALI_OPERATOR_NAMESPACE
 create_namespace $KIALI_NAMESPACE
-mensagem "Instalação do Kiali"
+mensagem "Instalação do Kiali Operator"
 helm upgrade \
     --install \
-    --set cr.create=true \
-    --set cr.namespace=$KIALI_NAMESPACE \
-    --namespace $KIALI_NAMESPACE \
+    --namespace $KIALI_OPERATOR_NAMESPACE \
     --repo https://kiali.org/helm-charts \
     kiali-operator \
     kiali-operator
-mensagem "Configuração do Kiali com o operator"
+
+mensagem "Configuração do Kiali"
 kubectl -n $KIALI_NAMESPACE apply -f kiali.yaml
 
 # executar o kiali: istioctl dashboard kiali
@@ -195,5 +199,23 @@ kubectl -n $KIALI_NAMESPACE apply -f kiali.yaml
 mensagem "Configuração dos destinationrules e virtualservices"
 kubectl -n $DEMO_NAMESPACE apply -f optionals/bookinfo/destination-rule-all.yaml
 kubectl -n $DEMO_NAMESPACE apply -f optionals/bookinfo/virtual-service-all-v1.yaml
+
+# -----------------------------------------
+# Configurar Distributed Tracing com Jaeger
+# -----------------------------------------
+
+mensagem "Instalação do Jaeger Operator"
+create_namespace $JAEGER_OPERATOR_NAMESPACE
+kubectl apply -n $JAEGER_OPERATOR_NAMESPACE -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/crds/jaegertracing.io_jaegers_crd.yaml
+kubectl apply -n $JAEGER_OPERATOR_NAMESPACE -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/service_account.yaml
+kubectl apply -n $JAEGER_OPERATOR_NAMESPACE -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/role.yaml
+kubectl apply -n $JAEGER_OPERATOR_NAMESPACE -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/role_binding.yaml
+kubectl apply -n $JAEGER_OPERATOR_NAMESPACE -f optionals/jaeger/operator.yaml
+kubectl apply -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/cluster_role.yaml
+kubectl apply -f optionals/jaeger/cluster_role_binding.yaml
+
+mensagem "Configuração do Jaeger"
+create_namespace $JAEGER_NAMESPACE
+kubectl apply -n $JAEGER_NAMESPACE -f jaeger.yaml
 
 mensagem "Finalizado com sucesso!"
