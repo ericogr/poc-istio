@@ -1,0 +1,27 @@
+---
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: istiocontrolplane
+spec:
+  # referencia: https://istio.io/v1.5/docs/reference/config/installation-options/
+  profile: demo
+  meshConfig:
+    accessLogFile: /dev/stdout
+    enableTracing: true
+    defaultConfig:
+      tracing:
+        sampling: 100
+  values:
+    global:
+      proxy:
+        logLevel: debug
+        tracer: zipkin
+      tracer:
+        zipkin:
+          address: simplest-collector.jaeger:9411
+  # kiali:
+  #   prometheusAddr: http://prometheus-operator-kube-p-prometheus.prometheus-operator:9090
+  #   dashboard:
+  #     grafanaURL: http://prometheus-operator-grafana.prometheus-operator:80
+  #     jaegerURL: http://simplest-query.jaeger:16686

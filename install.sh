@@ -40,7 +40,7 @@ wait_rollout() {
   PARAM_NAMESPACE=$1
   PARAM_DEPLOYMENT=$2
   PARAM_RETRIES=$3
-  mensagem "Aguarda rollout do $PARAM_NAMESPACE/$PARAM_DEPLOYMENT - $PARAM_RETRIES tentativas"
+  mensagem "Aguarda rollout do $PARAM_NAMESPACE/$PARAM_DEPLOYMENT: $PARAM_RETRIES tentativas"
 
   for i in $(seq $PARAM_RETRIES); do
     err=0
@@ -54,6 +54,11 @@ wait_rollout() {
       sleep 5
     fi
   done
+
+  if [ ! $err -eq 0 ]; then
+    mensagem "Falha no de rollout, excedido o número de tentativas: $PARAM_RETRIES"
+    exit 1
+  fi
 }
 
 # download do istio
@@ -78,7 +83,7 @@ fi
 # -----------------------
 mensagem "Instalando o metrics server"
 kubectl -n kube-system apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
-kubectl -n kube-system patch deployment metrics-server --patch "$(cat metrics-server-patch.yaml)"
+kubectl -n kube-system patch deployment metrics-server --patch "$(cat optionals/metrics-server/metrics-server-patch.yaml)"
 
 # -------------------------------
 # instalar operator do prometheus
@@ -99,24 +104,16 @@ helm upgrade \
 mensagem "Instalando o Istio operator"
 $ISTIO_BIN operator init --operatorNamespace $ISTIO_OPERATOR_NAMESPACE
 
-# ---------------------
-# configurar o operator
-# ---------------------
+# ------------------------------
+# configurar o operator do istio
+# ------------------------------
 
 # criar namespace
 create_namespace $ISTIO_NAMESPACE
 
 # instalar com profile demo com istio operator
 mensagem "Configurar o Istio usando o operator com perfil demo"
-kubectl apply -f - <<EOF
-apiVersion: install.istio.io/v1alpha1
-kind: IstioOperator
-metadata:
-  namespace: $ISTIO_NAMESPACE
-  name: example-istiocontrolplane
-spec:
-  profile: demo
-EOF
+kubectl -n $ISTIO_NAMESPACE apply -f optionals/istio/operator.yaml
 
 # aguardar rollout do operator
 wait_rollout $ISTIO_NAMESPACE istiod 5
@@ -188,7 +185,7 @@ helm upgrade \
     kiali-operator
 
 mensagem "Configuração do Kiali"
-kubectl -n $KIALI_NAMESPACE apply -f kiali.yaml
+kubectl -n $KIALI_NAMESPACE apply -f optionals/kiali/kiali.yaml
 
 # executar o kiali: istioctl dashboard kiali
 # executar port-forward kiali: kubectl -n kiali-operator port-forward service/kiali 20001
@@ -204,6 +201,8 @@ kubectl -n $DEMO_NAMESPACE apply -f optionals/bookinfo/virtual-service-all-v1.ya
 # Configurar Distributed Tracing com Jaeger
 # -----------------------------------------
 
+# link da instalação demo do jaeger feita pelo istio: https://raw.githubusercontent.com/istio/istio/release-1.9/samples/addons/jaeger.yaml
+
 mensagem "Instalação do Jaeger Operator"
 create_namespace $JAEGER_OPERATOR_NAMESPACE
 kubectl apply -n $JAEGER_OPERATOR_NAMESPACE -f https://raw.githubusercontent.com/jaegertracing/jaeger-operator/master/deploy/crds/jaegertracing.io_jaegers_crd.yaml
@@ -216,6 +215,6 @@ kubectl apply -f optionals/jaeger/cluster_role_binding.yaml
 
 mensagem "Configuração do Jaeger"
 create_namespace $JAEGER_NAMESPACE
-kubectl apply -n $JAEGER_NAMESPACE -f jaeger.yaml
+kubectl apply -n $JAEGER_NAMESPACE -f optionals/jaeger/jaeger.yaml
 
 mensagem "Finalizado com sucesso!"

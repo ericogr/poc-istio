@@ -36,9 +36,9 @@ spec:
   - name: v1
     labels:
       version: v1
-  # - name: v2
-  #   labels:
-  #     version: v2
+  - name: v2
+    labels:
+      version: v2
   # - name: v2-mysql
   #   labels:
   #     version: v2-mysql
