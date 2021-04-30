@@ -15,7 +15,7 @@ DEMO_NAMESPACE=istio-demo
 KIALI_OPERATOR_NAMESPACE=kiali-operator
 KIALI_NAMESPACE=kiali
 JAEGER_NAMESPACE=jaeger
-PROMETHEUS_NAMESPACE=prometheus-operator
+PROMETHEUS_OPERATOR_NAMESPACE=prometheus-operator
 
 # ---------------------------------
 # Parametros internos (não alterar)
@@ -89,10 +89,11 @@ kubectl -n kube-system patch deployment metrics-server --patch "$(cat optionals/
 # instalar operator do prometheus
 # -------------------------------
 mensagem "Instalando o Prometheus operator"
-create_namespace $PROMETHEUS_NAMESPACE
+create_namespace $PROMETHEUS_OPERATOR_NAMESPACE
 helm upgrade \
   --install \
-  -n $PROMETHEUS_NAMESPACE \
+  -n $PROMETHEUS_OPERATOR_NAMESPACE \
+  -f optionals/grafana/values.yaml \
   --repo https://prometheus-community.github.io/helm-charts \
   prometheus-operator \
   kube-prometheus-stack
@@ -153,9 +154,15 @@ mensagem "Demo disponível em: http://$GATEWAY_URL/productpage"
 # -----------------------------
 
 # criar o service monitoring
-mensagem "Configurar o monitoramento do Prometheus para o Istio"
+mensagem "Configurar o monitoramento do Prometheus para o Istio (service monitor)"
 kubectl -n $ISTIO_NAMESPACE apply -f https://raw.githubusercontent.com/istio/istio/4461a6b2324bceabd6f0ef3896ca1ca338180c45/samples/addons/extras/prometheus-operator.yaml
 kubectl -n $ISTIO_NAMESPACE label --overwrite -f https://raw.githubusercontent.com/istio/istio/4461a6b2324bceabd6f0ef3896ca1ca338180c45/samples/addons/extras/prometheus-operator.yaml release=prometheus-operator
+
+# configurar paineis do grafana
+mensagem "Configurar o monitoramento do Prometheus para o Istio (paineis grafana)"
+kubectl -n $PROMETHEUS_OPERATOR_NAMESPACE apply -f optionals/grafana/istio-grafana-dashboard.yaml
+kubectl -n $PROMETHEUS_OPERATOR_NAMESPACE apply -f optionals/grafana/istio-mesh-grafana-dashboard.yaml
+kubectl -n $PROMETHEUS_OPERATOR_NAMESPACE apply -f optionals/grafana/istio-workload-dashboard.yaml
 
 # este script é o completo, para todas as métricas. o basico no script deve ser suficiente
 # kubectl -n $ISTIO_NAMESPACE apply -f optionals/service-monitor-istio.yaml
